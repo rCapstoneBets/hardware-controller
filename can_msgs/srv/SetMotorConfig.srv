@@ -1,0 +1,10 @@
+uint8 neutral_mode
+bool invert_motor
+bool invert_sensor
+bool vcomp_enable
+float32 vcomp_voltage
+uint8 feedback_sensor
+int32 feedback_interval
+int8 follower_id
+---
+bool success

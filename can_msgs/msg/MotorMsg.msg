@@ -1,0 +1,3 @@
+float64 demand
+uint8 control_mode
+int32 arb_feedforward

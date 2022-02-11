@@ -7,9 +7,10 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+
+find_package(Threads REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(can_msgs REQUIRED)
 
 add_executable(hardware_node src/hardware_node.cpp)
 target_include_directories(hardware_node PUBLIC
@@ -17,18 +18,37 @@ target_include_directories(hardware_node PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(hardware_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
+ament_target_dependencies(hardware_node Threads rclcpp can_msgs)
+
+#link CTRE libs
+set(CTRE_EXEC hardware_node)
+if (${CMAKE_LIBRARY_ARCHITECTURE} STREQUAL "arm-linux-gnueabihf") # Jetson TK1 / Pi
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_Phoenix.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixCCI.a)
+	  target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixDiagnostics.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixPlatform_socketcan.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixCanutils.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixCore.a)
+    target_link_libraries(${CTRE_EXEC} -lstdc++fs)
+elseif (${CMAKE_LIBRARY_ARCHITECTURE} STREQUAL "aarch64-linux-gnu") # Jetson TX2
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_Phoenix.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixCCI.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixDiagnostics.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixPlatform_socketcan.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixCanutils.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixCore.a)
+else()
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_Phoenix.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixCCI.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixDiagnostics.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixPlatform_socketcan.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixCanutils.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixCore.a)
+endif()
+
+
 install(TARGETS hardware_node
   DESTINATION lib/${PROJECT_NAME})
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
 
 ament_package()

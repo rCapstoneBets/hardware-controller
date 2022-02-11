@@ -1,0 +1,9 @@
+uint8 slot
+float32 k_p
+float32 k_i
+float32 k_d
+float32 k_f
+float32 i_max
+uint8 pid_slot
+---
+bool success
