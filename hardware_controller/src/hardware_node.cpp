@@ -1,9 +1,8 @@
 #include <can_msgs/msg/motor_msg.hpp>
-#include <cstdio>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/bool.hpp>
 
-#include "rclcpp/rclcpp.hpp"
+#include <rclcpp/rclcpp.hpp>
 
 #define Phoenix_No_WPI  // remove WPI dependencies
 #include "ctre/Phoenix.h"
@@ -152,7 +151,34 @@ class HardwareNode : public rclcpp::Node {
         if (msg->data) ctre::phoenix::unmanaged::FeedEnable(SAFETY_TIMEOUT_MS);
     }
 
-    void highRateCallback() {}
+    void highRateCallback() {
+		auto msg = sensor_msgs::msg::JointState();
+		msg.name = jointNames;
+		
+		// Joint positions in radians from boot
+		msg.position = {
+			panMotor->GetSelectedSensorPosition() / 1024.0 * M_PI,
+			tiltMotor->GetSelectedSensorPosition() / 1024.0 * M_PI,
+			leftWheelMotor->GetSelectedSensorPosition() / 1024.0 * M_PI,
+			rightWheelMotor->GetSelectedSensorPosition() / 1024.0 * M_PI
+		};
+
+		// Joint velocities in radians/s
+		msg.velocity = {
+			panMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI,
+			tiltMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI,
+			leftWheelMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI,
+			rightWheelMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI
+		};
+
+		// Joint current consumption (directly relates torque) in Amps
+		msg.effort = {
+			panMotor->GetStatorCurrent(),
+			tiltMotor->GetStatorCurrent(),
+			leftWheelMotor->GetStatorCurrent(),
+			rightWheelMotor->GetStatorCurrent()
+		};
+	}
 
     void updatePanMotor(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {}
 
@@ -178,6 +204,9 @@ class HardwareNode : public rclcpp::Node {
 
     std::shared_ptr<TalonFX> panMotor, tiltMotor, leftWheelMotor,
         rightWheelMotor;
+
+
+	std::vector<std::string> jointNames = {"pan_motor", "tilt_motor", "left_wheel_motor", "right_wheel_motor"};
 };
 
 int main(int argc, char **argv) {
