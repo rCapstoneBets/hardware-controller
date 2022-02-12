@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(Threads REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(can_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 add_executable(hardware_node src/hardware_node.cpp)
 target_include_directories(hardware_node PUBLIC
@@ -18,7 +19,7 @@ target_include_directories(hardware_node PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(hardware_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
-ament_target_dependencies(hardware_node Threads rclcpp can_msgs)
+ament_target_dependencies(hardware_node Threads rclcpp can_msgs sensor_msgs)
 
 #link CTRE libs
 set(CTRE_EXEC hardware_node)
