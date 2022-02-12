@@ -7,13 +7,14 @@
 
 namespace motors {
     class TalonBrushless : public Motor {
+        public:
         TalonBrushless(int id, std::string motorName) {
             motor = std::make_shared<TalonFX>(id);
             name = motorName;
         }
 
         void configMotorPIDF(const std::shared_ptr<can_msgs::srv::SetPIDFGains::Request> req,
-                             std::shared_ptr<can_msgs::srv::SetPIDFGains::Response> resp) {
+                             std::shared_ptr<can_msgs::srv::SetPIDFGains::Response> resp) override {
             motor->SelectProfileSlot(req->pid_slot, 0);
             motor->Config_kP(req->pid_slot, req->k_p, 0);
             motor->Config_kI(req->pid_slot, req->k_i, 0);
@@ -23,7 +24,7 @@ namespace motors {
             resp->success = motor->GetLastError() == OK;
         }
 
-        void declareConfig(std::shared_ptr<rclcpp::Node> node) {
+        void declareConfig(std::shared_ptr<rclcpp::Node> node) override {
             RCLCPP_DEBUG_STREAM(node->get_logger(), "Declaring motor params for " << name);
 
             // Basic params
@@ -46,7 +47,7 @@ namespace motors {
             node->declare_parameter<double>(name + ".current_lim.time_window", -1);
         }
 
-        void executeConfig(std::shared_ptr<rclcpp::Node> node) {
+        void executeConfig(std::shared_ptr<rclcpp::Node> node) override {
             RCLCPP_DEBUG_STREAM(node->get_logger(), "Configuring motor params for " << name);
 
             // Set basic settings
@@ -89,7 +90,7 @@ namespace motors {
                                              currentLimitTime});
         }
 
-        void setValue(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {
+        void setValue(std::shared_ptr<can_msgs::msg::MotorMsg> msg) override {
             motor->Set(static_cast<ctre::phoenix::motorcontrol::ControlMode>(msg->control_mode), msg->demand);
         }
 

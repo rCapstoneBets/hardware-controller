@@ -5,23 +5,23 @@
 #include <std_msgs/msg/bool.hpp>
 
 #define Phoenix_No_WPI  // remove WPI dependencies
+#include <algorithm>
+#include <cctype>
+#include <exception>
+#include <memory>
+#include <string>
+
 #include "ctre/Phoenix.h"
 #include "ctre/phoenix/cci/Unmanaged_CCI.h"
 #include "ctre/phoenix/platform/Platform.h"
 #include "ctre/phoenix/unmanaged/Unmanaged.h"
-
-#include "motor.hpp"
-#include "talon_brushless.hpp"
-
-#include <algorithm>
-#include <cctype>
-#include <string>
+#include "hardware_controller/motor.hpp"
+#include "hardware_controller/talon_brushless.hpp"
 
 #define SAFETY_TIMEOUT_MS 100
 using std::placeholders::_1;
 using std::placeholders::_2;
 using namespace std::chrono_literals;
-
 
 class HardwareNode : public rclcpp::Node {
  public:
@@ -35,88 +35,86 @@ class HardwareNode : public rclcpp::Node {
         subsOpt = rclcpp::SubscriptionOptions();
         subsOpt.callback_group = subs;
 
-		RCLCPP_DEBUG(get_logger(), "Loading motors from config");
-
-		this->declare_parameter<std::vector<std::string>>("motor_names", {});
-		auto motorNames = this->get_parameter("pan_motor.id").as_string_array();
-
-        for(auto motorName : motorNames){
-			RCLCPP_DEBUG_STREAM(get_logger(), "Building motor " << motorName);
-			this->declare_parameter<int>(motorName + ".id", 0);
-			this->declare_parameter<std::string>(motorName + ".type", "");
-
-			auto type = this->get_parameter(motorName + ".type").as_string();
-			std::transform(type.begin(), type.end(), type.begin(), 
-				[](unsigned char c){return std::tolower(c);});
-
-			motors::MotorContainer motorContainer;
-			if(type.find("talonfx") != std::string::npos){
-				motorContainer.motor = motors::TalonBrushless(
-					this->get_parameter(motorName +".id").as_int(),
-					motorName
-				);
-			} else {
-				RCLCPP_ERROR_STREAM(get_logger(), "Error loading motor " << motorName << " with type " << type);
-			}
-
-			RCLCPP_DEBUG(get_logger(), "Initializing subscription");
-
-			motorContainer.sub = create_subscription<can_msgs::msg::MotorMsg>(
-            "motor/" + motorName, rclcpp::SystemDefaultsQoS(),
-            std::bind(&motors::Motor::setValue, motorContainer.motor, _1), subsOpt);
-
-			RCLCPP_DEBUG(get_logger(), "Initializing PIDF service");
-
-			motorContainer.pidfSrv = create_service<can_msgs::srv::SetPIDFGains>("motor/" + motorName + "/set_pidf", 
-			std::bind(&motors::Motor::setValue, motorContainer.motor, _1, _2), subs);
-
-		}
+        RCLCPP_DEBUG(get_logger(), "Initializing safety subscriber");
 
         safetySubscrip = create_subscription<std_msgs::msg::Bool>(
             "safety_enable", rclcpp::SystemDefaultsQoS(),
             std::bind(&HardwareNode::feedSafety, this, _1), subsOpt);
 
-    
-
-        
-
-        RCLCPP_DEBUG(get_logger(), "Initializing publishers");
-
+        RCLCPP_DEBUG(get_logger(), "Initializing publisher");
         motorStatePub = create_publisher<sensor_msgs::msg::JointState>(
             "motor/joint_state", rclcpp::SensorDataQoS());
-
-        RCLCPP_DEBUG(get_logger(), "Getting parameters");
-
-        this->declare_parameter<int>("pan_motor.id", 1);
-        this->declare_parameter<int>("tilt_motor.id", 2);
-        this->declare_parameter<int>("left_wheel_motor.id", 3);
-        this->declare_parameter<int>("right_wheel_motor.id", 4);
-
-        RCLCPP_DEBUG(get_logger(), "Constructing motors");
-
-        auto panMotorId = this->get_parameter("pan_motor.id").as_int();
-        auto tiltMotorId = this->get_parameter("tilt_motor.id").as_int();
-        auto leftWheelMotorId = this->get_parameter("left_wheel_motor.id").as_int();
-        auto rightWheelMotorId = this->get_parameter("right_wheel_motor.id").as_int();
-
-        panMotor = std::make_shared<TalonFX>(panMotorId);
-        tiltMotor = std::make_shared<TalonFX>(tiltMotorId);
-        leftWheelMotor = std::make_shared<TalonFX>(leftWheelMotorId);
-        rightWheelMotor = std::make_shared<TalonFX>(rightWheelMotorId);
-
-        RCLCPP_DEBUG(get_logger(), "Configuring motors");
-
-        configMotor(panMotor, "pan_motor");
-        configMotor(tiltMotor, "tilt_motor");
-        configMotor(leftWheelMotor, "left_wheel_motor");
-        configMotor(rightWheelMotor, "right_wheel_motor");
 
         RCLCPP_DEBUG(get_logger(), "Initializing timers");
 
         highRate = create_wall_timer(
             10ms, std::bind(&HardwareNode::highRateCallback, this), pubs);
+        highRate->cancel();
 
         RCLCPP_INFO(get_logger(), "Hardware controller initalized");
+    }
+
+    void createMotors() {
+        std::vector<std::string> motorNames;
+        RCLCPP_DEBUG(get_logger(), "Loading motors from config");
+        try {
+            this->declare_parameter<std::vector<std::string>>("motor_names", {});
+            motorNames = this->get_parameter("motor_names").as_string_array();
+        } catch (std::runtime_error) {
+            // This is what happens if the array is empty
+            RCLCPP_FATAL(get_logger(), "No motors declared in config. Controller will now exit!");
+            throw std::runtime_error("No motors declared in config. Controller will now exit!");
+        }
+
+        if (motorNames.size() < 1) {
+            RCLCPP_FATAL(get_logger(), "No motors declared in config. Controller will now exit!");
+            throw std::runtime_error("No motors declared in config. Controller will now exit!");
+        }
+
+        for (auto motorName : motorNames) {
+            RCLCPP_DEBUG_STREAM(get_logger(), "Building motor " << motorName);
+            this->declare_parameter<int>(motorName + ".id", 0);
+            this->declare_parameter<std::string>(motorName + ".type", "");
+
+            auto type = this->get_parameter(motorName + ".type").as_string();
+            std::transform(type.begin(), type.end(), type.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
+
+            motors::Motor *motorBase;
+            if (type.find("talonfx") != std::string::npos) {
+                motorBase = new motors::TalonBrushless(
+                    this->get_parameter(motorName + ".id").as_int(),
+                    motorName);
+            } else {
+                RCLCPP_ERROR_STREAM(get_logger(), "Error loading motor " << motorName << " with type " << type);
+                continue;
+            }
+
+            RCLCPP_DEBUG_STREAM(get_logger(), "Binding motor " << motorName);
+            motors::MotorContainer motorContainer = {
+                *motorBase,
+                create_subscription<can_msgs::msg::MotorMsg>(
+                    "motor/" + motorName, rclcpp::SystemDefaultsQoS(),
+                    std::bind(&motors::Motor::setValue, motorContainer.motor, _1), subsOpt),
+                create_service<can_msgs::srv::SetPIDFGains>("motor/" + motorName + "/set_pidf",
+                                                            std::bind(&motors::Motor::configMotorPIDF, motorContainer.motor, _1, _2))};
+
+            motorContainers.push_back(motorContainer);
+        }
+
+        RCLCPP_DEBUG(get_logger(), "Declaring motor parameters");
+        for (auto motorContainer : motorContainers) {
+            this->shared_from_this();
+            motorContainer.motor.declareConfig(this->shared_from_this());
+        }
+
+        RCLCPP_DEBUG(get_logger(), "Configuring motors from parameters");
+        for (auto motorContainer : motorContainers) {
+            motorContainer.motor.executeConfig(this->shared_from_this());
+        }
+
+        // Allow timer to free run now
+        highRate->reset();
     }
 
     void feedSafety(std::shared_ptr<std_msgs::msg::Bool> msg) {
@@ -125,16 +123,8 @@ class HardwareNode : public rclcpp::Node {
 
     void highRateCallback() {
         auto msg = sensor_msgs::msg::JointState();
-        
     }
 
-    void updatePanMotor(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {}
-
-    void updateTiltMotor(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {}
-
-    void updateWheelMotor(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {}
-
-    
 
  private:
     // safety enable subscription that allows motors to be active
@@ -149,7 +139,6 @@ class HardwareNode : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr highRate;
 
     std::vector<motors::MotorContainer> motorContainers;
-
 };
 
 int main(int argc, char **argv) {
@@ -163,6 +152,7 @@ int main(int argc, char **argv) {
     rclcpp::executors::MultiThreadedExecutor executor;
 
     auto node = std::make_shared<HardwareNode>();
+    node->createMotors();
 
     executor.add_node(node);
 

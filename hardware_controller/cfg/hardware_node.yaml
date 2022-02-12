@@ -1,6 +1,47 @@
 /hardware_node:
   ros__parameters:
+    motor_names:
+    - pan_motor
+    - tilt_motor
+    - left_wheel_motor
+    - right_wheel_motor
     left_wheel_motor:
+      brake_mode: false
+      current_lim:
+        abs_lim: -1.0
+        enable: true
+        lim_trigger: -1.0
+        time_window: -1.0
+      follower: -1
+      id: 2
+      inverted: false
+      pid:
+        izone: 0.0
+        kd: 0.0
+        kf: 0.0
+        ki: 0.0
+        kp: 0.0
+      type: TalonFx
+      vcomp: -1.0
+    pan_motor:
+      brake_mode: false
+      current_lim:
+        abs_lim: -1.0
+        enable: true
+        lim_trigger: -1.0
+        time_window: -1.0
+      follower: -1
+      id: 0
+      inverted: false
+      pid:
+        izone: 0.0
+        kd: 0.0
+        kf: 0.0
+        ki: 0.0
+        kp: 0.0
+      type: TalonFx
+      vcomp: -1.0
+    right_wheel_motor:
       brake_mode: false
       current_lim:
         abs_lim: -1.0
@@ -16,9 +57,10 @@
         kf: 0.0
         ki: 0.0
         kp: 0.0
+      type: TalonFx
       vcomp: -1.0
-    pan_motor:
-      brake_mode: true
+    tilt_motor:
+      brake_mode: false
       current_lim:
         abs_lim: -1.0
         enable: true
@@ -33,38 +75,5 @@
         kf: 0.0
         ki: 0.0
         kp: 0.0
-      vcomp: -1.0
-    right_wheel_motor:
-      brake_mode: false
-      current_lim:
-        abs_lim: -1.0
-        enable: true
-        lim_trigger: -1.0
-        time_window: -1.0
-      follower: -1
-      id: 4
-      inverted: false
-      pid:
-        izone: 0.0
-        kd: 0.0
-        kf: 0.0
-        ki: 0.0
-        kp: 0.0
-      vcomp: -1.0
-    tilt_motor:
-      brake_mode: true
-      current_lim:
-        abs_lim: -1.0
-        enable: true
-        lim_trigger: -1.0
-        time_window: -1.0
-      follower: -1
-      id: 2
-      inverted: false
-      pid:
-        izone: 0.0
-        kd: 0.0
-        kf: 0.0
-        ki: 0.0
-        kp: 0.0
+      type: TalonFx
       vcomp: -1.0

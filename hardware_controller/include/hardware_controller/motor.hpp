@@ -15,16 +15,16 @@ namespace motors
     class Motor{
         public:
 
-        virtual void declareConfig(std::shared_ptr<rclcpp::Node>) = 0;
+        virtual void declareConfig(std::shared_ptr<rclcpp::Node>){}
 
-        virtual void executeConfig(std::shared_ptr<rclcpp::Node>) = 0;
+        virtual void executeConfig(std::shared_ptr<rclcpp::Node>){}
 
-        virtual void setValue(std::shared_ptr<can_msgs::msg::MotorMsg> msg) = 0;
+        virtual void setValue(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {}
 
         virtual void configMotorPIDF(const std::shared_ptr<can_msgs::srv::SetPIDFGains::Request> req,
-                         std::shared_ptr<can_msgs::srv::SetPIDFGains::Response> resp) = 0;
+                         std::shared_ptr<can_msgs::srv::SetPIDFGains::Response> resp){}
 
-        virtual JointState getJointState() = 0;
+        virtual JointState getJointState() {}
 
     };
 
