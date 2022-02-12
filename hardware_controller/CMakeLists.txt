@@ -51,5 +51,9 @@ endif()
 install(TARGETS hardware_node
   DESTINATION lib/${PROJECT_NAME})
 
+#install shared dirs
+install(DIRECTORY launch cfg
+  DESTINATION share/${PROJECT_NAME}/)
+
 
 ament_package()
