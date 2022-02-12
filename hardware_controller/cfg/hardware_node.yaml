@@ -1,0 +1,70 @@
+/hardware_node:
+  ros__parameters:
+    left_wheel_motor:
+      brake_mode: false
+      current_lim:
+        abs_lim: -1.0
+        enable: true
+        lim_trigger: -1.0
+        time_window: -1.0
+      follower: -1
+      id: 3
+      inverted: false
+      pid:
+        izone: 0.0
+        kd: 0.0
+        kf: 0.0
+        ki: 0.0
+        kp: 0.0
+      vcomp: -1.0
+    pan_motor:
+      brake_mode: true
+      current_lim:
+        abs_lim: -1.0
+        enable: true
+        lim_trigger: -1.0
+        time_window: -1.0
+      follower: -1
+      id: 1
+      inverted: false
+      pid:
+        izone: 0.0
+        kd: 0.0
+        kf: 0.0
+        ki: 0.0
+        kp: 0.0
+      vcomp: -1.0
+    right_wheel_motor:
+      brake_mode: false
+      current_lim:
+        abs_lim: -1.0
+        enable: true
+        lim_trigger: -1.0
+        time_window: -1.0
+      follower: -1
+      id: 4
+      inverted: false
+      pid:
+        izone: 0.0
+        kd: 0.0
+        kf: 0.0
+        ki: 0.0
+        kp: 0.0
+      vcomp: -1.0
+    tilt_motor:
+      brake_mode: true
+      current_lim:
+        abs_lim: -1.0
+        enable: true
+        lim_trigger: -1.0
+        time_window: -1.0
+      follower: -1
+      id: 2
+      inverted: false
+      pid:
+        izone: 0.0
+        kd: 0.0
+        kf: 0.0
+        ki: 0.0
+        kp: 0.0
+      vcomp: -1.0

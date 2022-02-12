@@ -74,8 +74,8 @@ class HardwareNode : public rclcpp::Node {
 
         configMotor(panMotor, "pan_motor");
         configMotor(tiltMotor, "tilt_motor");
-        configMotor(leftWheelMotor, "left_motor");
-        configMotor(rightWheelMotor, "right_motor");
+        configMotor(leftWheelMotor, "left_wheel_motor");
+        configMotor(rightWheelMotor, "right_wheel_motor");
 
         RCLCPP_DEBUG(get_logger(), "Initializing timers");
 
@@ -86,7 +86,7 @@ class HardwareNode : public rclcpp::Node {
     }
 
     void configMotor(std::shared_ptr<TalonFX> motor, std::string motorName) {
-        RCLCPP_DEBUG_STREAM(get_logger(), "Configuring motor " << motorName);
+        RCLCPP_DEBUG_STREAM(get_logger(), "Declaring motor params for " << motorName);
 
         // Basic params
         this->declare_parameter<bool>(motorName + ".inverted", false);
@@ -106,6 +106,8 @@ class HardwareNode : public rclcpp::Node {
 		this->declare_parameter<double>(motorName + ".current_lim.abs_lim", -1);
 		this->declare_parameter<double>(motorName + ".current_lim.lim_trigger", -1);
         this->declare_parameter<double>(motorName + ".current_lim.time_window", -1);
+
+		RCLCPP_DEBUG_STREAM(get_logger(), "Configuring motor params for " << motorName);
 
 		// Set basic settings
         motor->ConfigFactoryDefault();
