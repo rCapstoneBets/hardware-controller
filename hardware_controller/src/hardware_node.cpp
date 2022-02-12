@@ -1,8 +1,8 @@
 #include <can_msgs/msg/motor_msg.hpp>
+#include <can_msgs/srv/set_pidf_gains.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/bool.hpp>
-
-#include <rclcpp/rclcpp.hpp>
 
 #define Phoenix_No_WPI  // remove WPI dependencies
 #include "ctre/Phoenix.h"
@@ -10,9 +10,18 @@
 #include "ctre/phoenix/platform/Platform.h"
 #include "ctre/phoenix/unmanaged/Unmanaged.h"
 
+#include "motor.hpp"
+#include "talon_brushless.hpp"
+
+#include <algorithm>
+#include <cctype>
+#include <string>
+
 #define SAFETY_TIMEOUT_MS 100
 using std::placeholders::_1;
+using std::placeholders::_2;
 using namespace std::chrono_literals;
+
 
 class HardwareNode : public rclcpp::Node {
  public:
@@ -26,23 +35,50 @@ class HardwareNode : public rclcpp::Node {
         subsOpt = rclcpp::SubscriptionOptions();
         subsOpt.callback_group = subs;
 
-        RCLCPP_DEBUG(get_logger(), "Initializing subscribers");
+		RCLCPP_DEBUG(get_logger(), "Loading motors from config");
+
+		this->declare_parameter<std::vector<std::string>>("motor_names", {});
+		auto motorNames = this->get_parameter("pan_motor.id").as_string_array();
+
+        for(auto motorName : motorNames){
+			RCLCPP_DEBUG_STREAM(get_logger(), "Building motor " << motorName);
+			this->declare_parameter<int>(motorName + ".id", 0);
+			this->declare_parameter<std::string>(motorName + ".type", "");
+
+			auto type = this->get_parameter(motorName + ".type").as_string();
+			std::transform(type.begin(), type.end(), type.begin(), 
+				[](unsigned char c){return std::tolower(c);});
+
+			motors::MotorContainer motorContainer;
+			if(type.find("talonfx") != std::string::npos){
+				motorContainer.motor = motors::TalonBrushless(
+					this->get_parameter(motorName +".id").as_int(),
+					motorName
+				);
+			} else {
+				RCLCPP_ERROR_STREAM(get_logger(), "Error loading motor " << motorName << " with type " << type);
+			}
+
+			RCLCPP_DEBUG(get_logger(), "Initializing subscription");
+
+			motorContainer.sub = create_subscription<can_msgs::msg::MotorMsg>(
+            "motor/" + motorName, rclcpp::SystemDefaultsQoS(),
+            std::bind(&motors::Motor::setValue, motorContainer.motor, _1), subsOpt);
+
+			RCLCPP_DEBUG(get_logger(), "Initializing PIDF service");
+
+			motorContainer.pidfSrv = create_service<can_msgs::srv::SetPIDFGains>("motor/" + motorName + "/set_pidf", 
+			std::bind(&motors::Motor::setValue, motorContainer.motor, _1, _2), subs);
+
+		}
 
         safetySubscrip = create_subscription<std_msgs::msg::Bool>(
             "safety_enable", rclcpp::SystemDefaultsQoS(),
             std::bind(&HardwareNode::feedSafety, this, _1), subsOpt);
 
-        panMotorSub = create_subscription<can_msgs::msg::MotorMsg>(
-            "motor/pan", rclcpp::SystemDefaultsQoS(),
-            std::bind(&HardwareNode::updatePanMotor, this, _1), subsOpt);
+    
 
-        tiltMotorSub = create_subscription<can_msgs::msg::MotorMsg>(
-            "motor/tilt", rclcpp::SystemDefaultsQoS(),
-            std::bind(&HardwareNode::updateTiltMotor, this, _1), subsOpt);
-
-        wheelMotorSub = create_subscription<can_msgs::msg::MotorMsg>(
-            "motor/wheel", rclcpp::SystemDefaultsQoS(),
-            std::bind(&HardwareNode::updateWheelMotor, this, _1), subsOpt);
+        
 
         RCLCPP_DEBUG(get_logger(), "Initializing publishers");
 
@@ -59,14 +95,13 @@ class HardwareNode : public rclcpp::Node {
         RCLCPP_DEBUG(get_logger(), "Constructing motors");
 
         auto panMotorId = this->get_parameter("pan_motor.id").as_int();
-        panMotor = std::make_shared<TalonFX>(panMotorId);
         auto tiltMotorId = this->get_parameter("tilt_motor.id").as_int();
+        auto leftWheelMotorId = this->get_parameter("left_wheel_motor.id").as_int();
+        auto rightWheelMotorId = this->get_parameter("right_wheel_motor.id").as_int();
+
+        panMotor = std::make_shared<TalonFX>(panMotorId);
         tiltMotor = std::make_shared<TalonFX>(tiltMotorId);
-        auto leftWheelMotorId =
-            this->get_parameter("left_wheel_motor.id").as_int();
         leftWheelMotor = std::make_shared<TalonFX>(leftWheelMotorId);
-        auto rightWheelMotorId =
-            this->get_parameter("right_wheel_motor.id").as_int();
         rightWheelMotor = std::make_shared<TalonFX>(rightWheelMotorId);
 
         RCLCPP_DEBUG(get_logger(), "Configuring motors");
@@ -84,101 +119,14 @@ class HardwareNode : public rclcpp::Node {
         RCLCPP_INFO(get_logger(), "Hardware controller initalized");
     }
 
-    void configMotor(std::shared_ptr<TalonFX> motor, std::string motorName) {
-        RCLCPP_DEBUG_STREAM(get_logger(), "Declaring motor params for " << motorName);
-
-        // Basic params
-        this->declare_parameter<bool>(motorName + ".inverted", false);
-		this->declare_parameter<bool>(motorName + ".brake_mode", false);
-        this->declare_parameter<int>(motorName + ".follower", -1);
-        this->declare_parameter<double>(motorName + ".vcomp", -1);
-
-		// PID params
-        this->declare_parameter<double>(motorName + ".pid.kp", 0.0);
-		this->declare_parameter<double>(motorName + ".pid.ki", 0.0);
-		this->declare_parameter<double>(motorName + ".pid.kd", 0.0);
-		this->declare_parameter<double>(motorName + ".pid.kf", 0.0);
-		this->declare_parameter<double>(motorName + ".pid.izone", 0.0);
-
-		// Current limit params
-		this->declare_parameter<bool>(motorName + ".current_lim.enable", -1);
-		this->declare_parameter<double>(motorName + ".current_lim.abs_lim", -1);
-		this->declare_parameter<double>(motorName + ".current_lim.lim_trigger", -1);
-        this->declare_parameter<double>(motorName + ".current_lim.time_window", -1);
-
-		RCLCPP_DEBUG_STREAM(get_logger(), "Configuring motor params for " << motorName);
-
-		// Set basic settings
-        motor->ConfigFactoryDefault();
-        motor->ConfigSelectedFeedbackSensor(FeedbackDevice::IntegratedSensor);
-        motor->SelectProfileSlot(0, 0);
-        motor->SetInverted(this->get_parameter(motorName + ".inverted").as_bool());
-
-		// Configure follower mode (assumes other device is another falcon)
-        auto follower = get_parameter(motorName + ".follower").as_int();
-        if (follower >= 0)
-            motor->Set(ctre::phoenix::motorcontrol::ControlMode::Follower, follower);
-
-        // Configure the neutral mode
-        motor->SetNeutralMode(get_parameter(motorName + ".brake_mode").as_bool()
-                                  ? NeutralMode::Brake : NeutralMode::Coast);
-
-		// Configure voltage compensation
-        auto vcomp = get_parameter(motorName + ".vcomp").as_double();
-        if (vcomp > 0.0) {
-            motor->ConfigVoltageCompSaturation(vcomp);
-            motor->EnableVoltageCompensation(true);
-        }
-
-		// Configure PID settings
-        motor->Config_kP(0, get_parameter(motorName + ".pid.kp").as_double(), 0);
-        motor->Config_kI(0, get_parameter(motorName + ".pid.ki").as_double(), 0);
-        motor->Config_kD(0, get_parameter(motorName + ".pid.kd").as_double(), 0);
-        motor->Config_kF(0, get_parameter(motorName + ".pid.kf").as_double(), 0);
-        motor->Config_IntegralZone(0, get_parameter(motorName + ".pid.izone").as_double(), 0);
-
-		// Configure Current Limiting
-        auto currentLimEnable = get_parameter(motorName + ".current_lim.enable").as_bool(); 
-        auto currentLimitVal = get_parameter(motorName + ".current_lim.abs_lim").as_double();
-        auto currentLimitTrigger = get_parameter(motorName + ".current_lim.lim_trigger").as_double();	
-        auto currentLimitTime = get_parameter(motorName + ".current_lim.time_window").as_double();
-        motor->ConfigStatorCurrentLimit({currentLimEnable, currentLimitVal,
-                                         currentLimitTrigger,
-                                         currentLimitTime});
-    }
-
     void feedSafety(std::shared_ptr<std_msgs::msg::Bool> msg) {
         if (msg->data) ctre::phoenix::unmanaged::FeedEnable(SAFETY_TIMEOUT_MS);
     }
 
     void highRateCallback() {
-		auto msg = sensor_msgs::msg::JointState();
-		msg.name = jointNames;
-		
-		// Joint positions in radians from boot
-		msg.position = {
-			panMotor->GetSelectedSensorPosition() / 1024.0 * M_PI,
-			tiltMotor->GetSelectedSensorPosition() / 1024.0 * M_PI,
-			leftWheelMotor->GetSelectedSensorPosition() / 1024.0 * M_PI,
-			rightWheelMotor->GetSelectedSensorPosition() / 1024.0 * M_PI
-		};
-
-		// Joint velocities in radians/s
-		msg.velocity = {
-			panMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI,
-			tiltMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI,
-			leftWheelMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI,
-			rightWheelMotor->GetSelectedSensorVelocity() * 10.0 / 1024.0 * M_PI
-		};
-
-		// Joint current consumption (directly relates torque) in Amps
-		msg.effort = {
-			panMotor->GetStatorCurrent(),
-			tiltMotor->GetStatorCurrent(),
-			leftWheelMotor->GetStatorCurrent(),
-			rightWheelMotor->GetStatorCurrent()
-		};
-	}
+        auto msg = sensor_msgs::msg::JointState();
+        
+    }
 
     void updatePanMotor(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {}
 
@@ -186,13 +134,11 @@ class HardwareNode : public rclcpp::Node {
 
     void updateWheelMotor(std::shared_ptr<can_msgs::msg::MotorMsg> msg) {}
 
+    
+
  private:
     // safety enable subscription that allows motors to be active
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr safetySubscrip;
-
-    // subscribers to take desired state for each motor
-    rclcpp::Subscription<can_msgs::msg::MotorMsg>::SharedPtr panMotorSub,
-        tiltMotorSub, wheelMotorSub;
 
     // publisher for the current joint states of each joint
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr motorStatePub;
@@ -202,11 +148,8 @@ class HardwareNode : public rclcpp::Node {
 
     rclcpp::TimerBase::SharedPtr highRate;
 
-    std::shared_ptr<TalonFX> panMotor, tiltMotor, leftWheelMotor,
-        rightWheelMotor;
+    std::vector<motors::MotorContainer> motorContainers;
 
-
-	std::vector<std::string> jointNames = {"pan_motor", "tilt_motor", "left_wheel_motor", "right_wheel_motor"};
 };
 
 int main(int argc, char **argv) {
