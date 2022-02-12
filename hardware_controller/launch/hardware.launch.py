@@ -36,4 +36,11 @@ def generate_launch_description():
                 LaunchConfiguration("config_file")
             ]
         ),
+
+        launch_ros.actions.Node(
+            package='micro_ros_agent',
+            executable='micro_ros_agent',
+            output='screen',
+            arguments=['udp4', '--port', '8888', '-v3'] ## change to -v4 for actual logs
+        )
     ])
