@@ -123,6 +123,14 @@ class HardwareNode : public rclcpp::Node {
 
     void highRateCallback() {
         auto msg = sensor_msgs::msg::JointState();
+        for (auto motor : motorContainers){
+            auto data = motor.motor.getJointState();
+            msg.name.push_back(data.name);
+            msg.position.push_back(data.position);
+            msg.velocity.push_back(data.velocity);
+            msg.effort.push_back(data.effort);
+        }
+        motorStatePub->publish(msg);
     }
 
 
