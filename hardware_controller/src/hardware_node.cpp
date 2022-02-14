@@ -1,5 +1,7 @@
 #include <can_msgs/msg/motor_msg.hpp>
 #include <can_msgs/srv/set_pidf_gains.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/bool.hpp>
@@ -55,6 +57,12 @@ class HardwareNode : public rclcpp::Node {
     }
 
     void createMotors() {
+        // create the diagnostic updater
+        updater = std::make_shared<diagnostic_updater::Updater>(this->shared_from_this());
+        updater->setHardwareID("none");
+        updater->add("Can Bus Stats", this, &HardwareNode::can_diagnostics);
+        updater->force_update();
+
         std::vector<std::string> motorNames;
         RCLCPP_DEBUG(get_logger(), "Loading motors from config");
         try {
@@ -123,7 +131,7 @@ class HardwareNode : public rclcpp::Node {
 
     void highRateCallback() {
         auto msg = sensor_msgs::msg::JointState();
-        for (auto motor : motorContainers){
+        for (auto motor : motorContainers) {
             auto data = motor.motor.getJointState();
             msg.name.push_back(data.name);
             msg.position.push_back(data.position);
@@ -133,6 +141,30 @@ class HardwareNode : public rclcpp::Node {
         motorStatePub->publish(msg);
     }
 
+    void can_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat) {
+        // get bus statistics
+        float busPct;
+        uint32_t busOff, txFull, rec, tec;
+        int32_t status;
+        ctre::phoenix::platform::can::CANbus_GetStatus(&busPct, &busOff, &txFull, &rec, &tec, &status);
+
+        auto rosStatus = diagnostic_msgs::msg::DiagnosticStatus::OK;
+        if(busPct > 0.5)
+            rosStatus = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+        if(busPct > 0.9 || txFull > 25 || status != 0 || busOff > 25)
+            rosStatus = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+
+        stat.summary(
+            rosStatus,
+            "CAN Bus statistics");
+
+        stat.add("Bus time percentage", busPct);
+        stat.add("Bus off count", busOff);
+        stat.add("Bus transmit buffer full error", txFull);
+        stat.add("Bus rec", rec);
+        stat.add("Bus tec", tec);
+        stat.add("Bus Status", busPct);
+    }
 
  private:
     // safety enable subscription that allows motors to be active
@@ -147,6 +179,8 @@ class HardwareNode : public rclcpp::Node {
     rclcpp::TimerBase::SharedPtr highRate;
 
     std::vector<motors::MotorContainer> motorContainers;
+
+    std::shared_ptr<diagnostic_updater::Updater> updater;
 };
 
 int main(int argc, char **argv) {

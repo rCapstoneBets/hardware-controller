@@ -7,11 +7,13 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(can_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 
 add_executable(hardware_node src/hardware_node.cpp)
 target_include_directories(hardware_node PUBLIC
@@ -19,7 +21,9 @@ target_include_directories(hardware_node PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(hardware_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
-ament_target_dependencies(hardware_node Threads rclcpp can_msgs sensor_msgs)
+target_link_libraries(hardware_node Threads::Threads)
+
+ament_target_dependencies(hardware_node rclcpp can_msgs sensor_msgs diagnostic_msgs diagnostic_updater)
 
 #link CTRE libs
 set(CTRE_EXEC hardware_node)
