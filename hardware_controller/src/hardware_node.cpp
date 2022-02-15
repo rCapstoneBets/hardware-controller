@@ -70,13 +70,7 @@ class HardwareNode : public rclcpp::Node {
             motorNames = this->get_parameter("motor_names").as_string_array();
         } catch (std::runtime_error) {
             // This is what happens if the array is empty
-            RCLCPP_FATAL(get_logger(), "No motors declared in config. Controller will now exit!");
-            throw std::runtime_error("No motors declared in config. Controller will now exit!");
-        }
-
-        if (motorNames.size() < 1) {
-            RCLCPP_FATAL(get_logger(), "No motors declared in config. Controller will now exit!");
-            throw std::runtime_error("No motors declared in config. Controller will now exit!");
+            RCLCPP_FATAL(get_logger(), "No motors declared in config!");
         }
 
         for (auto motorName : motorNames) {

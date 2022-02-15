@@ -91,7 +91,29 @@ namespace motors {
         }
 
         void setValue(std::shared_ptr<can_msgs::msg::MotorMsg> msg) override {
-            motor->Set(static_cast<ctre::phoenix::motorcontrol::ControlMode>(msg->control_mode), msg->demand);
+            auto controlMode = static_cast<ctre::phoenix::motorcontrol::ControlMode>(msg->control_mode);
+            switch(controlMode){
+                case ControlMode::PercentOutput :
+                    motor->Set(controlMode, msg->demand);
+                    break;
+
+                case ControlMode::Velocity :
+                    motor->Set(controlMode, msg->demand / 10.0 * 1024.0 / M_PI);
+                    break;
+
+                case ControlMode::Position :
+                    motor->Set(controlMode, msg->demand * 1024.0 / M_PI);
+                    break;
+
+                case ControlMode::MotionMagic : 
+                    motor->Set(controlMode, msg->demand * 1024.0 / M_PI);
+                    break;
+                
+                default:
+                    std::cout << "Unknown / unused control mode!" << std::endl;
+
+            }
+            
         }
 
         JointState getJointState(){

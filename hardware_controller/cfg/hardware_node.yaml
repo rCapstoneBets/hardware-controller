@@ -1,9 +1,9 @@
 /hardware_node:
   ros__parameters:
     motor_names:
-    - pan_motor
-    - tilt_motor
-    - left_wheel_motor
+    #- pan_motor
+    #- tilt_motor
+    #- left_wheel_motor
     - right_wheel_motor
     left_wheel_motor:
       brake_mode: false

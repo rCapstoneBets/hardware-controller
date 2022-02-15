@@ -42,5 +42,12 @@ def generate_launch_description():
             executable='micro_ros_agent',
             output='screen',
             arguments=['udp4', '--port', '8888', '-v3'] ## change to -v4 for actual logs
+        ),
+
+        launch_ros.actions.Node(
+            package='diagnostic_aggregator',
+            executable='aggregator_node',
+            output='screen',
+            arguments=['--ros-args', '--log-level', 'ERROR'],
         )
     ])
