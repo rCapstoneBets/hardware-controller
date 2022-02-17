@@ -15,13 +15,15 @@ namespace motors {
 
         void configMotorPIDF(const std::shared_ptr<can_msgs::srv::SetPIDFGains::Request> req,
                              std::shared_ptr<can_msgs::srv::SetPIDFGains::Response> resp) override {
+            std::cout << "config PIDF for " << name << " motor" << std::endl;
             motor->SelectProfileSlot(req->pid_slot, 0);
             motor->Config_kP(req->pid_slot, req->k_p, 0);
             motor->Config_kI(req->pid_slot, req->k_i, 0);
             motor->Config_IntegralZone(req->pid_slot, req->i_max, 0);
             motor->Config_kD(req->pid_slot, req->k_d, 0);
             motor->Config_kF(req->pid_slot, req->k_f, 0);
-            resp->success = motor->GetLastError() == OK;
+            //resp->success = motor->GetLastError() == OK;
+            resp->success = true;
         }
 
         void declareConfig(std::shared_ptr<rclcpp::Node> node) override {
@@ -90,10 +92,12 @@ namespace motors {
                                              currentLimitTime});
         }
 
-        void setValue(std::shared_ptr<can_msgs::msg::MotorMsg> msg) override {
+        void setValue(const can_msgs::msg::MotorMsg::SharedPtr msg) override {
+            //std::cout << "recieved data for " << name << " motor" << std::endl;
             auto controlMode = static_cast<ctre::phoenix::motorcontrol::ControlMode>(msg->control_mode);
             switch(controlMode){
                 case ControlMode::PercentOutput :
+                    //std::cout << "running percent ouptut, demand: "  << msg->demand << std::endl;
                     motor->Set(controlMode, msg->demand);
                     break;
 

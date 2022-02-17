@@ -28,20 +28,11 @@ using namespace std::chrono_literals;
 class HardwareNode : public rclcpp::Node {
  public:
     HardwareNode() : Node("hardware_node") {
-        // Register publisher ans subscriber callback groups
-        subs = this->create_callback_group(
-            rclcpp::CallbackGroupType::MutuallyExclusive);
-        pubs = this->create_callback_group(
-            rclcpp::CallbackGroupType::MutuallyExclusive);
-
-        subsOpt = rclcpp::SubscriptionOptions();
-        subsOpt.callback_group = subs;
-
         RCLCPP_DEBUG(get_logger(), "Initializing safety subscriber");
 
         safetySubscrip = create_subscription<std_msgs::msg::Bool>(
             "safety_enable", rclcpp::SystemDefaultsQoS(),
-            std::bind(&HardwareNode::feedSafety, this, _1), subsOpt);
+            std::bind(&HardwareNode::feedSafety, this, _1));
 
         RCLCPP_DEBUG(get_logger(), "Initializing publisher");
         motorStatePub = create_publisher<sensor_msgs::msg::JointState>(
@@ -50,7 +41,7 @@ class HardwareNode : public rclcpp::Node {
         RCLCPP_DEBUG(get_logger(), "Initializing timers");
 
         highRate = create_wall_timer(
-            10ms, std::bind(&HardwareNode::highRateCallback, this), pubs);
+            10ms, std::bind(&HardwareNode::highRateCallback, this));
         highRate->cancel();
 
         RCLCPP_INFO(get_logger(), "Hardware controller initalized");
@@ -97,9 +88,9 @@ class HardwareNode : public rclcpp::Node {
                 *motorBase,
                 create_subscription<can_msgs::msg::MotorMsg>(
                     "motor/" + motorName, rclcpp::SystemDefaultsQoS(),
-                    std::bind(&motors::Motor::setValue, motorContainer.motor, _1), subsOpt),
+                    std::bind(&motors::Motor::setValue, std::ref(motorContainer.motor), _1)),
                 create_service<can_msgs::srv::SetPIDFGains>("motor/" + motorName + "/set_pidf",
-                                                            std::bind(&motors::Motor::configMotorPIDF, motorContainer.motor, _1, _2))};
+                                                            std::bind(&motors::Motor::configMotorPIDF, std::ref(motorContainer.motor), _1, _2))};
 
             motorContainers.push_back(motorContainer);
         }
@@ -167,9 +158,6 @@ class HardwareNode : public rclcpp::Node {
     // publisher for the current joint states of each joint
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr motorStatePub;
 
-    rclcpp::CallbackGroup::SharedPtr subs, pubs;
-    rclcpp::SubscriptionOptionsWithAllocator<std::allocator<void>> subsOpt;
-
     rclcpp::TimerBase::SharedPtr highRate;
 
     std::vector<motors::MotorContainer> motorContainers;
@@ -185,15 +173,10 @@ int main(int argc, char **argv) {
     std::string interface = "can0";
     ctre::phoenix::platform::can::SetCANInterface(interface.c_str());
 
-    rclcpp::executors::MultiThreadedExecutor executor;
-
     auto node = std::make_shared<HardwareNode>();
     node->createMotors();
 
-    executor.add_node(node);
-
-    // serve the callbacks
-    executor.spin();
+    rclcpp::spin(node);
 
     rclcpp::shutdown();
 
