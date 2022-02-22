@@ -34,7 +34,7 @@ class HardwareNode : public rclcpp::Node {
             "safety_enable", rclcpp::SystemDefaultsQoS(),
             std::bind(&HardwareNode::feedSafety, this, _1));
 
-        RCLCPP_DEBUG(get_logger(), "Initializing publisher");
+        RCLCPP_DEBUG(get_logger(), "Initializing data publisher");
         motorStatePub = create_publisher<sensor_msgs::msg::JointState>(
             "motor/joint_state", rclcpp::SensorDataQoS());
 
@@ -86,9 +86,10 @@ class HardwareNode : public rclcpp::Node {
             RCLCPP_DEBUG_STREAM(get_logger(), "Binding motor " << motorName);
             motors::MotorContainer motorContainer = {
                 *motorBase,
-                create_subscription<can_msgs::msg::MotorMsg>(
-                    "motor/" + motorName, rclcpp::SystemDefaultsQoS(),
+
+                create_subscription<can_msgs::msg::MotorMsg>("motor/" + motorName + "/demand", rclcpp::SystemDefaultsQoS(),
                     std::bind(&motors::Motor::setValue, std::ref(motorContainer.motor), _1)),
+
                 create_service<can_msgs::srv::SetPIDFGains>("motor/" + motorName + "/set_pidf",
                                                             std::bind(&motors::Motor::configMotorPIDF, std::ref(motorContainer.motor), _1, _2))};
 
