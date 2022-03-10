@@ -28,27 +28,15 @@ ament_target_dependencies(hardware_node rclcpp can_msgs sensor_msgs diagnostic_m
 #link CTRE libs
 set(CTRE_EXEC hardware_node)
 if (${CMAKE_LIBRARY_ARCHITECTURE} STREQUAL "arm-linux-gnueabihf") # Jetson TK1 / Pi
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_Phoenix.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixCCI.a)
-	  target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixDiagnostics.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixPlatform_socketcan.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixCanutils.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixCore.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_Phoenix.so )
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/raspberry/libCTRE_PhoenixCCI.so)
     target_link_libraries(${CTRE_EXEC} -lstdc++fs)
 elseif (${CMAKE_LIBRARY_ARCHITECTURE} STREQUAL "aarch64-linux-gnu") # Jetson TX2
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_Phoenix.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixCCI.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixDiagnostics.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixPlatform_socketcan.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixCanutils.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixCore.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_Phoenix.so)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/jetsontx/libCTRE_PhoenixCCI.so)
 else()
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_Phoenix.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixCCI.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixDiagnostics.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixPlatform_socketcan.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixCanutils.a)
-    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixCore.a)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_Phoenix.so)
+    target_link_libraries(${CTRE_EXEC} ${CMAKE_SOURCE_DIR}/lib/x86-64/libCTRE_PhoenixCCI.so)
 endif()
 
 

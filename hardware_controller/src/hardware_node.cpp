@@ -112,7 +112,8 @@ class HardwareNode : public rclcpp::Node {
     }
 
     void feedSafety(std::shared_ptr<std_msgs::msg::Bool> msg) {
-        if (msg->data) ctre::phoenix::unmanaged::FeedEnable(SAFETY_TIMEOUT_MS);
+        
+        if (msg->data) ctre::phoenix::unmanaged::Unmanaged::FeedEnable(SAFETY_TIMEOUT_MS);
     }
 
     void highRateCallback() {
@@ -169,10 +170,6 @@ class HardwareNode : public rclcpp::Node {
 int main(int argc, char **argv) {
     // init ros node
     rclcpp::init(argc, argv);
-
-    // init canbus
-    std::string interface = "can0";
-    ctre::phoenix::platform::can::SetCANInterface(interface.c_str());
 
     auto node = std::make_shared<HardwareNode>();
     node->createMotors();
