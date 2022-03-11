@@ -34,21 +34,16 @@ else()
     set(PHOENIX_LIBS_DIR ${CMAKE_SOURCE_DIR}/lib/x86-64)
 endif()
 
-add_library(CTRE_Phoenix SHARED IMPORTED ${PHOENIX_LIBS_DIR}/libCTRE_Phoenix.so)
-set_property(TARGET CTRE_Phoenix PROPERTY IMPORTED_LOCATION )
-set_property(TARGET CTRE_Phoenix APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/include )
-
-add_library(CTRE_PhoenixCCI SHARED IMPORTED ${PHOENIX_LIBS_DIR}/libCTRE_PhoenixCCI.so)
-set_property(TARGET CTRE_PhoenixCCI PROPERTY IMPORTED_LOCATION ${PHOENIX_LIBS_DIR}/libCTRE_PhoenixCCI.so)
-set_property(TARGET CTRE_PhoenixCCI APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/include )
-
-ament_export_libraries(CTRE_Phoenix CTRE_PhoenixCCI)
-
-target_link_libraries(hardware_node CTRE_Phoenix CTRE_PhoenixCCI)
-
+target_link_libraries(hardware_node ${PHOENIX_LIBS_DIR}/libCTRE_Phoenix.so)
+target_link_libraries(hardware_node ${PHOENIX_LIBS_DIR}/libCTRE_PhoenixCCI.so)
 
 install(TARGETS hardware_node
   DESTINATION lib/${PROJECT_NAME})
+
+install(
+  FILES ${PHOENIX_LIBS_DIR}/libCTRE_Phoenix.so ${PHOENIX_LIBS_DIR}/libCTRE_PhoenixCCI.so
+  DESTINATION lib
+)
 
 #install shared dirs
 install(DIRECTORY launch cfg
