@@ -133,7 +133,7 @@ class HardwareNode : public rclcpp::Node {
         float busPct;
         uint32_t busOff, txFull, rec, tec;
         int32_t status;
-        ctre::phoenix::platform::can::CANbus_GetStatus(&busPct, &busOff, &txFull, &rec, &tec, &status);
+        ctre::phoenix::platform::can::CANbus_GetStatus(busPct, busOff, txFull, rec, tec, status, "can0");
 
         auto rosStatus = diagnostic_msgs::msg::DiagnosticStatus::OK;
         if(busPct > 0.5)
