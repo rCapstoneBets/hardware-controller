@@ -1,9 +1,11 @@
 import launch
 import launch.actions
 from ament_index_python.packages import get_package_share_directory
-import launch_ros.actions
+from launch_ros.actions import PushRosNamespace, Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import TextSubstitution, LaunchConfiguration, PathJoinSubstitution
+from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.actions import IncludeLaunchDescription, GroupAction
 
 def generate_launch_description():
 
@@ -26,28 +28,31 @@ def generate_launch_description():
             description="log level to use",
         ),
 
-        launch_ros.actions.Node(
+        Node(
             package="hardware_controller",
             executable="hardware_node",
             name="hardware_node",
-            output="screen",
+            respawn=True,
+            output='screen',
             arguments=['--ros-args', '--log-level', LaunchConfiguration("log_level")],
             parameters=[
                 LaunchConfiguration("config_file")
             ]
         ),
 
-        launch_ros.actions.Node(
-            package='micro_ros_agent',
-            executable='micro_ros_agent',
-            output='screen',
-            arguments=['udp4', '--port', '8888', '-v3'] ## change to -v4 for actual logs
-        ),
+        # Node(
+        #     package='micro_ros_agent',
+        #     executable='micro_ros_agent',
+        #     output='screen',
+        #     respawn=True,
+        #     arguments=['udp4', '--port', '8888', '-v3'] ## change to -v4 for actual logs
+        # ),
 
-        launch_ros.actions.Node(
+        Node(
             package='diagnostic_aggregator',
             executable='aggregator_node',
             output='screen',
+            respawn=True,
             arguments=['--ros-args', '--log-level', 'ERROR'],
-        )
+        ),        
     ])

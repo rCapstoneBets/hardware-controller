@@ -19,6 +19,7 @@
 #include "ctre/phoenix/unmanaged/Unmanaged.h"
 #include "hardware_controller/motor.hpp"
 #include "hardware_controller/talon_brushless.hpp"
+#include "hardware_controller/talon_brushed.hpp"
 
 #define SAFETY_TIMEOUT_MS 100
 using std::placeholders::_1;
@@ -36,7 +37,7 @@ class HardwareNode : public rclcpp::Node {
 
         RCLCPP_DEBUG(get_logger(), "Initializing data publisher");
         motorStatePub = create_publisher<sensor_msgs::msg::JointState>(
-            "motor/joint_state", rclcpp::SensorDataQoS());
+            "motor/joint_state", rclcpp::SystemDefaultsQoS());
 
         RCLCPP_DEBUG(get_logger(), "Initializing timers");
 
@@ -76,6 +77,10 @@ class HardwareNode : public rclcpp::Node {
             motors::Motor *motorBase;
             if (type.find("talonfx") != std::string::npos) {
                 motorBase = new motors::TalonBrushless(
+                    this->get_parameter(motorName + ".id").as_int(),
+                    motorName);
+            } else if (type.find("talonsrx") != std::string::npos){ 
+                motorBase = new motors::TalonBrushed(
                     this->get_parameter(motorName + ".id").as_int(),
                     motorName);
             } else {

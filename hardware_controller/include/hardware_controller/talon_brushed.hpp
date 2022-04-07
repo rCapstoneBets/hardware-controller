@@ -1,15 +1,13 @@
-#pragma once
-
 #include "motor.hpp"
 
 #define Phoenix_No_WPI  // remove WPI dependencies
 #include "ctre/Phoenix.h"
 
 namespace motors {
-    class TalonBrushless : public Motor {
+    class TalonBrushed : public Motor {
         public:
-        TalonBrushless(int id, std::string motorName) {
-            motor = std::make_shared<TalonFX>(id);
+        TalonBrushed(int id, std::string motorName) {
+            motor = std::make_shared<TalonSRX>(id);
             name = motorName;
         }
 
@@ -59,7 +57,7 @@ namespace motors {
 
             // Set basic settings
             motor->ConfigFactoryDefault();
-            motor->ConfigSelectedFeedbackSensor(FeedbackDevice::IntegratedSensor);
+            motor->ConfigSelectedFeedbackSensor(FeedbackDevice::IntegratedSensor, 0);
             motor->SelectProfileSlot(0, 0);
             motor->SetInverted(node->get_parameter(name + ".inverted").as_bool());
 
@@ -80,14 +78,6 @@ namespace motors {
                 motor->EnableVoltageCompensation(true);
             }
 
-            // Configure PID settings
-            motor->Config_kP(0, node->get_parameter(name + ".pid.kp").as_double(), 0);
-            motor->Config_kI(0, node->get_parameter(name + ".pid.ki").as_double(), 0);
-            motor->Config_kD(0, node->get_parameter(name + ".pid.kd").as_double(), 0);
-            motor->Config_kF(0, node->get_parameter(name + ".pid.kf").as_double(), 0);
-            motor->Config_IntegralZone(0, node->get_parameter(name + ".pid.izone").as_double(), 0);
-
-            // Motion Magic
             auto motionVel = node->get_parameter(name + ".motion_magic.cruise_vel").as_double() / 10.0 * 1024.0 / M_PI;
             auto motionAccel = node->get_parameter(name + ".motion_magic.accel").as_double() / 10.0 * 1024.0 / M_PI;
             auto motionSmooth = node->get_parameter(name + ".motion_magic.smoothing").as_int();
@@ -100,15 +90,24 @@ namespace motors {
                 RCLCPP_WARN_STREAM(node->get_logger(), name + " is missing one or more of the values to turn motion magic on! cruise: " 
                 << motionVel << " accel: " << motionAccel << " smoothing: " << motionSmooth);
             }
+            
+            // Configure PID settings
+            motor->Config_kP(0, node->get_parameter(name + ".pid.kp").as_double(), 0);
+            motor->Config_kI(0, node->get_parameter(name + ".pid.ki").as_double(), 0);
+            motor->Config_kD(0, node->get_parameter(name + ".pid.kd").as_double(), 0);
+            motor->Config_kF(0, node->get_parameter(name + ".pid.kf").as_double(), 0);
+            motor->Config_IntegralZone(0, node->get_parameter(name + ".pid.izone").as_double(), 0);
 
             // Configure Current Limiting
             auto currentLimEnable = node->get_parameter(name + ".current_lim.enable").as_bool();
             auto currentLimitVal = node->get_parameter(name + ".current_lim.abs_lim").as_double();
             auto currentLimitTrigger = node->get_parameter(name + ".current_lim.lim_trigger").as_double();
             auto currentLimitTime = node->get_parameter(name + ".current_lim.time_window").as_double();
-            motor->ConfigStatorCurrentLimit({currentLimEnable, currentLimitVal,
-                                             currentLimitTrigger,
-                                             currentLimitTime});
+
+            motor->EnableCurrentLimit(currentLimEnable);
+            motor->ConfigPeakCurrentDuration(currentLimitTime * 1000);
+            motor->ConfigPeakCurrentLimit(currentLimitTrigger);
+            motor->ConfigContinuousCurrentLimit(currentLimitVal);
         }
 
         void setValue(const can_msgs::msg::MotorMsg::SharedPtr msg) override {
@@ -149,8 +148,7 @@ namespace motors {
         }
 
      private:
-        std::shared_ptr<TalonFX> motor;
+        std::shared_ptr<TalonSRX> motor;
         std::string name;
     };
-
-}  // namespace motors
+}

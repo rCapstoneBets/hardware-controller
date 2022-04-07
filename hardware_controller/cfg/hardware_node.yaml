@@ -5,75 +5,105 @@
     - tilt_motor
     - left_wheel_motor
     - right_wheel_motor
+    - fire_solenoid
     left_wheel_motor:
       brake_mode: false
       current_lim:
-        abs_lim: 80.0
+        abs_lim: 20.0
         enable: true
-        lim_trigger: 40.0
+        lim_trigger: 15.0
         time_window: 0.5
       follower: -1
       id: 3
       inverted: false
+      # Tuned
       pid:
-        izone: 0.0
+        izone: 150.0
         kd: 0.0
-        kf: 0.0
-        ki: 0.0
-        kp: 0.0
+        kf: 0.051
+        ki: 0.0010
+        kp: 1.0
       type: TalonFx
       vcomp: 11.0
     pan_motor:
-      brake_mode: false
+      brake_mode: true
       current_lim:
-        abs_lim: -1.0
+        abs_lim: 20.0
         enable: true
-        lim_trigger: -1.0
-        time_window: -1.0
+        lim_trigger: 15.0
+        time_window: 0.5
       follower: -1
       id: 2
       inverted: false
+      motion_magic:
+        accel: 10.0
+        cruise_vel: 10.0
+        smoothing: 1
       pid:
         izone: 0.0
         kd: 0.0
         kf: 0.0
         ki: 0.0
-        kp: 0.0
+        kp: 0.5
       type: TalonFx
-      vcomp: -1.0
+      vcomp: 11.0
     right_wheel_motor:
       brake_mode: false
       current_lim:
-        abs_lim: 80.0
+        abs_lim: 20.0
         enable: true
-        lim_trigger: 40.0
+        lim_trigger: 15.0
         time_window: 0.5
       follower: -1
       id: 4
       inverted: true
+      # Tuned
+      pid:
+        izone: 150.0
+        kd: 0.0
+        kf: 0.051
+        ki: 0.0010
+        kp: 1.0
+      type: TalonFx
+      vcomp: 11.0
+    # zero point at 23.275
+    tilt_motor:
+      brake_mode: true
+      current_lim:
+        abs_lim: 30.0
+        enable: true
+        lim_trigger: 25.0
+        time_window: 1.0
+      follower: -1
+      id: 1
+      inverted: false
+      motion_magic:
+        accel: 50.0
+        cruise_vel: 50.0
+        smoothing: 1
       pid:
         izone: 0.0
         kd: 0.0
         kf: 0.0
         ki: 0.0
-        kp: 0.0
+        kp: 0.7
       type: TalonFx
       vcomp: 11.0
-    tilt_motor:
+    fire_solenoid:
       brake_mode: false
       current_lim:
-        abs_lim: -1.0
+        abs_lim: 10.0
         enable: true
-        lim_trigger: -1.0
-        time_window: -1.0
+        lim_trigger: 5.0
+        time_window: 0.5
       follower: -1
-      id: 1
+      id: 5
       inverted: false
       pid:
         izone: 0.0
         kd: 0.0
         kf: 0.0
         ki: 0.0
-        kp: 0.0
-      type: TalonFx
-      vcomp: -1.0
+        kp: 0.5
+      type: TalonSRx
+      vcomp: 11.0
