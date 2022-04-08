@@ -61,6 +61,7 @@ namespace motors {
             motor->ConfigFactoryDefault();
             motor->ConfigSelectedFeedbackSensor(FeedbackDevice::IntegratedSensor);
             motor->SelectProfileSlot(0, 0);
+            motor->SetSelectedSensorPosition(0.0);
             motor->SetInverted(node->get_parameter(name + ".inverted").as_bool());
 
             // Configure follower mode (assumes other device is another falcon)
@@ -137,6 +138,10 @@ namespace motors {
 
             }
             
+        }
+
+        void setSensorPos(const std_msgs::msg::Float32::SharedPtr msg) override {
+            motor->SetSelectedSensorPosition(msg->data);
         }
 
         JointState getJointState(){

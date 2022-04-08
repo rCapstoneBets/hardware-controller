@@ -92,10 +92,10 @@
     fire_solenoid:
       brake_mode: false
       current_lim:
-        abs_lim: 10.0
+        abs_lim: 20.0
         enable: true
         lim_trigger: 5.0
-        time_window: 0.5
+        time_window: 2.0
       follower: -1
       id: 5
       inverted: false

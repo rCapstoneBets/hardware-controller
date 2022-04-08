@@ -35,6 +35,13 @@ class HardwareNode : public rclcpp::Node {
             "safety_enable", rclcpp::SystemDefaultsQoS(),
             std::bind(&HardwareNode::feedSafety, this, _1));
 
+        RCLCPP_DEBUG(get_logger(), "Initializing reset subscriber");
+
+        resetSubscrip = create_subscription<std_msgs::msg::Bool>(
+            "reset", rclcpp::SystemDefaultsQoS(),
+            std::bind(&HardwareNode::execReset, this, _1));
+
+
         RCLCPP_DEBUG(get_logger(), "Initializing data publisher");
         motorStatePub = create_publisher<sensor_msgs::msg::JointState>(
             "motor/joint_state", rclcpp::SystemDefaultsQoS());
@@ -117,8 +124,18 @@ class HardwareNode : public rclcpp::Node {
     }
 
     void feedSafety(std::shared_ptr<std_msgs::msg::Bool> msg) {
-        
         if (msg->data) ctre::phoenix::unmanaged::Unmanaged::FeedEnable(SAFETY_TIMEOUT_MS);
+    }
+
+    void execReset(std::shared_ptr<std_msgs::msg::Bool> msg){
+        // Create message with zero
+        auto resetMsg = std::make_shared<std_msgs::msg::Float32>();
+        resetMsg->data = 0;
+
+        // send the message to each motor
+        if(msg->data) for (auto motor : motorContainers) {
+            motor.motor.setSensorPos(resetMsg);
+        }
     }
 
     void highRateCallback() {
@@ -161,6 +178,10 @@ class HardwareNode : public rclcpp::Node {
  private:
     // safety enable subscription that allows motors to be active
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr safetySubscrip;
+
+    // reset subscription for resetting the motor system
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr resetSubscrip;
+
 
     // publisher for the current joint states of each joint
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr motorStatePub;
