@@ -121,15 +121,15 @@ namespace motors {
                     break;
 
                 case ControlMode::Velocity :
-                    motor->Set(controlMode, msg->demand / 10.0 * 1024.0 / M_PI);
+                    motor->Set(controlMode, msg->demand / 10.0 * 1024.0 / M_PI, DemandType::DemandType_ArbitraryFeedForward, msg->arb_feedforward);
                     break;
 
                 case ControlMode::Position :
-                    motor->Set(controlMode, msg->demand * 1024.0 / M_PI);
+                    motor->Set(controlMode, msg->demand * 1024.0 / M_PI, DemandType::DemandType_ArbitraryFeedForward, msg->arb_feedforward);
                     break;
 
                 case ControlMode::MotionMagic : 
-                    motor->Set(controlMode, msg->demand * 1024.0 / M_PI);
+                    motor->Set(controlMode, msg->demand * 1024.0 / M_PI, DemandType::DemandType_ArbitraryFeedForward, msg->arb_feedforward);
                     break;
                 
                 default:

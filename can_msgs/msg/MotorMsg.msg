@@ -1,3 +1,3 @@
-float64 demand
+float32 demand
 uint8 control_mode
-int32 arb_feedforward
+float32 arb_feedforward
