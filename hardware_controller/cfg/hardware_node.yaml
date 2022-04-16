@@ -36,15 +36,15 @@
       id: 2
       inverted: false
       motion_magic:
-        accel: 10.0
-        cruise_vel: 10.0
+        accel: 40.0
+        cruise_vel: 40.0
         smoothing: 1
       pid:
         izone: 0.0
-        kd: 0.0
+        kd: 6.0
         kf: 0.0
         ki: 0.0
-        kp: 0.5
+        kp: 1.5
       type: TalonFx
       vcomp: 11.0
     right_wheel_motor:
@@ -70,23 +70,23 @@
     tilt_motor:
       brake_mode: true
       current_lim:
-        abs_lim: 30.0
+        abs_lim: 40.0
         enable: true
         lim_trigger: 25.0
-        time_window: 1.0
+        time_window: 2.0
       follower: -1
       id: 1
       inverted: false
       motion_magic:
-        accel: 70.0
-        cruise_vel: 50.0
+        accel: 30.0
+        cruise_vel: 30.0
         smoothing: 1
       pid:
         izone: 0.0
         kd: 0.04
         kf: 0.0
         ki: 0.0
-        kp: 4.1
+        kp: 1.4
       type: TalonFx
       vcomp: 11.0
     fire_solenoid:
